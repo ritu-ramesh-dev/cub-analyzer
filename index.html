@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CUB Analyzer · Codon Usage Bias</title>
+  <meta name="description" content="Machine-learning analysis of codon usage bias to distinguish highly and lowly expressed genes in E. coli.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Top navigation: links jump to the sections of this single page -->
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="#top">CUB<span>Analyzer</span></a>
+      <div class="nav-links">
+        <a href="#analyzer">Analyzer</a>
+        <a href="#how">How it works</a>
+        <a href="#model">Model</a>
+        <a href="#team">Team</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+    <!-- 1. Title -->
+    <section class="hero">
+      <div class="wrap">
+        <p class="eyebrow">IBD Project · Group A09</p>
+        <h1>Machine-learning analysis of codon usage bias to distinguish highly and lowly expressed genes in prokaryotes</h1>
+        <p class="lead">Paste an <em>E. coli</em> coding sequence (or a FASTA file of many genes). The page calculates codon frequency, RSCU and CAI, and a Random Forest trained in Python on NCBI genes predicts whether the gene is <strong>highly expressed (HEG)</strong> or <strong>lowly expressed (LEG)</strong>.</p>
+        <a class="btn" href="#analyzer">Open the analyzer</a>
+      </div>
+    </section>
+
+    <!-- 2. Analyzer: input, results table, per-gene details -->
+    <section id="analyzer" class="section">
+      <div class="wrap">
+        <h2>Gene analyzer</h2>
+        <p class="muted">Input is read in frame from the first base. RNA (U) is converted to DNA (T). Nothing is uploaded: all calculation happens in the browser.</p>
+
+        <div class="card">
+          <label for="seq" class="label">DNA coding sequence or FASTA</label>
+          <textarea id="seq" spellcheck="false" placeholder=">my_gene&#10;ATGAAAGCTATTGGC..."></textarea>
+          <div class="row">
+            <button class="btn" id="run">Analyze</button>
+            <button class="btn ghost" id="demoTest">Example: NCBI test genes</button>
+            <button class="btn ghost" id="demoGfp">Example: GFP, optimal codons</button>
+            <label class="btn ghost file">Upload FASTA<input type="file" id="file" accept=".fa,.fasta,.fna,.txt,.ffn"></label>
+            <button class="btn ghost" id="clear">Clear</button>
+          </div>
+          <p id="msg" class="msg" role="status"></p>
+        </div>
+
+        <div id="results" hidden>
+          <div id="batchWrap" class="card" hidden>
+            <div class="row between">
+              <h3>All sequences</h3>
+              <button class="btn ghost" id="csv">Download features (CSV)</button>
+            </div>
+            <div class="table-scroll">
+              <table id="batch">
+                <thead><tr><th>Gene</th><th>Codons</th><th>GC %</th><th>GC3 %</th><th>CAI</th><th>P(HEG)</th><th>Prediction</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <p class="muted small">Click a row to see its details below. The CSV holds the 64 codon frequencies + 59 RSCU values of every gene.</p>
+          </div>
+
+          <div id="detail">
+            <h3 id="detailName"></h3>
+            <div class="stats">
+              <div class="stat" id="predCard"><span class="stat-label">Prediction</span><span class="stat-value" id="pred"></span><span class="stat-sub" id="predSub"></span></div>
+              <div class="stat"><span class="stat-label">CAI</span><span class="stat-value" id="cai"></span><span class="stat-sub">0 = rare codons · 1 = optimal</span></div>
+              <div class="stat"><span class="stat-label">Codons</span><span class="stat-value" id="len"></span><span class="stat-sub" id="lenSub"></span></div>
+              <div class="stat"><span class="stat-label">GC / GC3</span><span class="stat-value" id="gc"></span><span class="stat-sub">overall / 3rd position</span></div>
+            </div>
+
+            <div class="card">
+              <div class="row between">
+                <h4>RSCU by codon</h4>
+                <div class="legend"><span class="sw opt"></span>optimal codon in E. coli HEGs <span class="sw other"></span>other synonymous codon</div>
+              </div>
+              <p class="muted small">RSCU = observed count ÷ count expected if all synonymous codons were used equally. Above 1 means the codon is preferred.</p>
+              <div id="chart" class="chart"></div>
+            </div>
+          </div>
+        </div>
+
+        <p class="note"><strong>Tip:</strong> "NCBI test genes" loads real E. coli genes the model never saw during training. CAI (Sharp &amp; Li 1987 E. coli weights) is shown next to each prediction for comparison.</p>
+      </div>
+    </section>
+
+    <!-- 3. How it works -->
+    <section id="how" class="section alt">
+      <div class="wrap">
+        <h2>How it works</h2>
+        <p class="lead-sm">Most amino acids can be written by several codons. Genes that a cell makes in large amounts (HEG) lean heavily on the "fast" codons that match its most plentiful tRNAs, while rarely made genes (LEG) use codons more randomly. The model learns these habits and reads them back from any gene.</p>
+
+        <ol class="pipeline">
+          <li><span>1</span><div><strong>Read the gene</strong><p>The DNA sequence is cut into triplets (codons), in frame from the first base.</p></div></li>
+          <li><span>2</span><div><strong>Count codons</strong><p>How often each of the 64 codons appears gives 64 codon frequencies.</p></div></li>
+          <li><span>3</span><div><strong>Compare synonyms</strong><p>RSCU scores each codon against its synonymous codons (above 1 = preferred): 59 more values, 123 features in total.</p></div></li>
+          <li><span>4</span><div><strong>Random Forest</strong><p>200 decision trees, trained in Python with scikit-learn, look at the 123 features and vote HEG or LEG.</p></div></li>
+          <li><span>5</span><div><strong>Answer</strong><p>The share of trees voting HEG is P(HEG). 0.5 or more → highly expressed, otherwise lowly expressed.</p></div></li>
+        </ol>
+
+        <div class="grid3">
+          <div class="card">
+            <h4>Training data</h4>
+            <p><span data-k="nGenes">208</span> real <em>E. coli</em> K-12 genes from NCBI: <span data-k="nHeg">104</span> known highly expressed (ribosomal proteins, translation factors, chaperones, energy metabolism) and <span data-k="nLeg">104</span> lowly expressed transcriptional regulators.</p>
+          </div>
+          <div class="card">
+            <h4>Train / test split</h4>
+            <p>The model learns from <span data-k="nTrain">156</span> genes and is tested on the other <span data-k="nTest">52</span>, which it never sees. Duplicate NCBI records are removed and near-identical gene copies (like <em>tufA</em> / <em>tufB</em>) are kept on the same side.</p>
+          </div>
+          <div class="card">
+            <h4>Built in Python</h4>
+            <p>The pipeline is the Jupyter notebook <code>notebook/cub_model.ipynb</code>: Biopython fetches the genes, pandas builds the features, scikit-learn trains and tests the forest, matplotlib / seaborn plot the results. The trained trees are exported to <code>model/model-data.js</code>, which this page runs.</p>
+            <ul class="chips"><li>Python</li><li>Biopython</li><li>pandas</li><li>scikit-learn</li><li>matplotlib</li><li>seaborn</li></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Model results (numbers come from the notebook via model/model-data.js) -->
+    <section id="model" class="section">
+      <div class="wrap">
+        <h2>Random Forest model</h2>
+        <p class="muted" id="mSplit">Loading model…</p>
+
+        <div class="stats">
+          <div class="stat"><span class="stat-label">Test accuracy</span><span class="stat-value" id="mAcc">…</span><span class="stat-sub">on the <span data-k="nTest">52</span> held-out genes</span></div>
+          <div class="stat"><span class="stat-label">F1-score</span><span class="stat-value" id="mF1">…</span><span class="stat-sub">HEG as positive class</span></div>
+          <div class="stat"><span class="stat-label">Precision / Recall</span><span class="stat-value small-value"><span id="mPrec">…</span> / <span id="mRec">…</span></span><span class="stat-sub">for HEG</span></div>
+          <div class="stat"><span class="stat-label">Cross-validation</span><span class="stat-value small-value" id="mCv">…</span><span class="stat-sub">5 grouped train / test splits</span></div>
+          <div class="stat"><span class="stat-label">CAI rule</span><span class="stat-value" id="mCai">…</span><span class="stat-sub">same test genes, CAI ≥ 0.50 = HEG</span></div>
+        </div>
+
+        <div class="grid2">
+          <div class="card">
+            <h4>Confusion matrix (test genes)</h4>
+            <table class="cm">
+              <thead><tr><th></th><th>Predicted HEG</th><th>Predicted LEG</th></tr></thead>
+              <tbody>
+                <tr><th>Actual HEG</th><td class="good" id="cmTP">…</td><td class="bad" id="cmFN">…</td></tr>
+                <tr><th>Actual LEG</th><td class="bad" id="cmFP">…</td><td class="good" id="cmTN">…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h4>Data</h4>
+            <p class="small"><span data-k="nGenes">208</span> coding sequences of <em>Escherichia coli</em> K-12 MG1655 from NCBI RefSeq (NC_000913.3), labelled by NCBI gene annotation: <span data-k="nHeg">104</span> HEG and <span data-k="nLeg">104</span> LEG.</p>
+            <p class="small muted">Split with scikit-learn <code>StratifiedGroupKFold</code>: <span data-k="nTrain">156</span> training genes, <span data-k="nTest">52</span> test genes, balanced HEG / LEG. Full table: <code>data/cub_dataset.csv</code>.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row between">
+            <h4>Most important codons</h4>
+            <div class="legend"><span class="sw opt"></span>optimal codon in E. coli HEGs <span class="sw other"></span>other codon</div>
+          </div>
+          <p class="muted small">Top 15 features by Random Forest importance (mean decrease in Gini impurity), learned from the training genes.</p>
+          <div id="importance" class="importance"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Team -->
+    <section id="team" class="section alt">
+      <div class="wrap">
+        <h2>Team A09</h2>
+        <div class="team">
+          <div class="member"><span class="avatar">RR</span>Ritu Ramesh</div>
+          <div class="member"><span class="avatar">DK</span>Dinesh Karthick Raja</div>
+          <div class="member"><span class="avatar">JA</span>Jai Akash</div>
+          <div class="member"><span class="avatar">JP</span>Jayapriya</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="wrap">IBD Project · Group A09 · Codon usage bias &amp; gene expression in E. coli</div></footer>
+
+  <!-- Scripts, in order: trained model data → feature calculation → model → page logic -->
+  <script src="model/model-data.js"></script>
+  <script src="js/features.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
