@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CUB Analyzer · Codon Usage Bias</title>
+  <title>CUB Analyzer</title>
   <meta name="description" content="Machine-learning analysis of codon usage bias to distinguish highly and lowly expressed genes in E. coli.">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -55,7 +55,7 @@
           <div id="batchWrap" class="card" hidden>
             <div class="row between">
               <h3>All sequences</h3>
-              <button class="btn ghost" id="csv">Download features (CSV)</button>
+              <div class="row"><button class="btn ghost" id="copyCsv">Copy features (CSV)</button><button class="btn ghost" id="csv">Download CSV</button></div>
             </div>
             <div class="table-scroll">
               <table id="batch">

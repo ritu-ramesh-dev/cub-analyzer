@@ -88,8 +88,8 @@ function run() {
   $("results").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// ---------- CSV download of all features ----------
-function downloadCsv() {
+// ---------- CSV of all features: copy to clipboard or download ----------
+function buildCsv() {
   const header = ["gene", "codons", "gc", "gc3", "cai", "p_heg", "prediction",
     ...ALL_CODONS.map(c => `freq_${c}`), ...RSCU_CODONS.map(c => `rscu_${c}`)];
   const esc = s => `"${String(s).replace(/"/g, '""')}"`;
@@ -99,8 +99,12 @@ function downloadCsv() {
       Number.isNaN(r.prediction.p) ? "" : r.prediction.p.toFixed(4), r.prediction.label,
       ...ALL_CODONS.map(c => r.freq[c].toFixed(5)), ...RSCU_CODONS.map(c => r.rscu[c].toFixed(4))].join(","));
   }
+  return lines.join("\n");
+}
+
+function downloadCsv() {
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+  a.href = URL.createObjectURL(new Blob([buildCsv()], { type: "text/csv" }));
   a.download = "codon_features.csv";
   a.click();
   URL.revokeObjectURL(a.href);
@@ -152,6 +156,18 @@ $("demoTest").addEventListener("click", () => {
 });
 $("clear").addEventListener("click", () => { $("seq").value = ""; $("msg").textContent = ""; results = []; render(); });
 $("csv").addEventListener("click", downloadCsv);
+$("copyCsv").addEventListener("click", async () => {
+  const btn = $("copyCsv"), csv = buildCsv();
+  try {
+    await navigator.clipboard.writeText(csv);
+    btn.textContent = "Copied ✓";
+  } catch {
+    // clipboard refused: put the CSV in the input box, selected, so it can be copied by hand
+    $("seq").value = csv; $("seq").select();
+    btn.textContent = "Selected in the box above";
+  }
+  setTimeout(() => { btn.textContent = "Copy features (CSV)"; }, 2500);
+});
 $("file").addEventListener("change", e => {
   const file = e.target.files[0];
   if (!file) return;
