@@ -6,11 +6,11 @@ IBD Project · Group A09 — Ritu Ramesh, Dinesh Karthick Raja, Jai Akash, Jayap
 
 A working model website: paste an *E. coli* coding sequence (or upload a FASTA file) and the page calculates codon frequency, RSCU, GC / GC3 and CAI, and a Random Forest trained in Python predicts whether the gene is highly expressed (HEG) or lowly expressed (LEG).
 
-**Website (private link):** https://claude.ai/artifact/PfV1ph7vKk2qWY7Tmezju1 — viewers need to be given access by the owner before the link opens for them.
+**Website:** https://ritu-ramesh-dev.github.io/cub-analyzer/
 
 ## Running it
 
-- **Website online:** the private link above (sign-in required).
+- **Website online:** https://ritu-ramesh-dev.github.io/cub-analyzer/
 - **Website offline:** open `index.html` in any browser (double-click it). It needs no server and no internet connection.
 - **Model:** `pip install -r notebook/requirements.txt`, then run `notebook/cub_model.ipynb` in Jupyter (or Google Colab, after `!pip install biopython`). Running it re-creates `model/model-data.js` and `data/cub_dataset.csv`.
 
